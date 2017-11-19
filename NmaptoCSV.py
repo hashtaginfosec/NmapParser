@@ -20,7 +20,7 @@ import csv, argparse, sys
 
 if not len(sys.argv) >= 2:
     print("You missed Nmap XML name.")
-    print("Syntax: python NmapParser.py filename.xml")
+    print("Syntax: python NmaptoCSV.py filename.xml")
     sys.exit()
 else:
     nmapResults = sys.argv[1]
