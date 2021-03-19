@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2017 Q
-
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this output_file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,9 +12,15 @@
 #    limitations under the License.
 
 #Requires python-libnmap  --> pip install python-libnmap
+#Other requirements:
+# A targets.txt file that contains Subnets and names of those subnets (e.g., "192.168.1.0/24, GA DataCenter VLAN 1")
+
+
+
+
 from libnmap.parser import NmapParser
 import csv, argparse, sys
-
+from netaddr import *
 
 if not len(sys.argv) >= 2:
     print("You missed Nmap XML name.")
@@ -26,19 +30,32 @@ else:
     nmapResults = sys.argv[1]
 
 csvFileName = sys.argv[1].split(".")[0] + ".csv"
+print(csvFileName)
 
+#Create a dictionary with CIDR and environment name as key:value pair
+with open('targets.txt') as f:
+  targets = dict(x.rstrip().split(":", 1) for x in f)
+
+#CSV file that we'll write to
 csvfile = open(csvFileName, 'w')
-csvwriter = csv.writer(csvfile, dialect=csv.excel, delimiter='\t', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+csvwriter = csv.writer(csvfile, dialect=csv.excel, quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
-#create variable to store the report in
+#create variable to store parsed XML report in
 nmap_report=NmapParser.parse_fromfile(nmapResults, data_type='XML')
-csvwriter.writerow(['IPv4', 'IPv6', 'Hostname', 'Port', 'State', 'Protocol', 'Service', 'Reason', 'Banner', 'Operating System', 'Script Results'])
 
+#Write header row in CSV output
+csvwriter.writerow(['IPv4', 'Hostname', 'Subnet', 'Environment', 'Port', 'State', 'Protocol', 'Service', 'Reason', 'Banner'])
 
 for scanned_host in nmap_report.hosts:
     if scanned_host.is_up:
         ipv4 = scanned_host.ipv4
-        ipv6 = scanned_host.ipv6
+        #ipv6 = scanned_host.ipv6
+        for key in targets.keys():
+            if IPAddress(ipv4) in IPNetwork(key):
+                subnet = str(key)
+                environment = str(targets[key])
+                break
+
         hostname = scanned_host.hostnames
         if scanned_host.os_fingerprinted is True and scanned_host.os_match_probabilities() is not None:
             operating_systems = scanned_host.os_match_probabilities()
@@ -54,6 +71,6 @@ for scanned_host in nmap_report.hosts:
             banner = services.banner
             service = services.service
             reason = services.reason
-            csvwriter.writerow([ipv4, ipv6, str(hostname), port, state, protocol, service, reason, banner, str(os), scriptResults])
+            csvwriter.writerow([ipv4, hostname, subnet, environment, port, state, protocol, service, reason, banner])
 
 csvfile.close()
