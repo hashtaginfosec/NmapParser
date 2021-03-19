@@ -24,7 +24,7 @@ from netaddr import *
 
 if not len(sys.argv) >= 2:
     print("You missed Nmap XML name.")
-    print("Syntax: python NmaptoCSV.py filename.xml")
+    print("Syntax: python NmaptoCSV.py filename.xml targetsfile.txt[Optional parameter]")
     sys.exit()
 else:
     nmapResults = sys.argv[1]
@@ -33,8 +33,9 @@ csvFileName = sys.argv[1].split(".")[0] + ".csv"
 print(csvFileName)
 
 #Create a dictionary with CIDR and environment name as key:value pair
-with open('targets.txt') as f:
-  targets = dict(x.rstrip().split(":", 1) for x in f)
+if len(sys.argv) > 2:
+    with open(sys.argv[2]) as f:
+        targets = dict(x.rstrip().split(":", 1) for x in f)
 
 #CSV file that we'll write to
 csvfile = open(csvFileName, 'w')
@@ -44,17 +45,21 @@ csvwriter = csv.writer(csvfile, dialect=csv.excel, quotechar='|', quoting=csv.QU
 nmap_report=NmapParser.parse_fromfile(nmapResults, data_type='XML')
 
 #Write header row in CSV output
-csvwriter.writerow(['IPv4', 'Hostname', 'Subnet', 'Environment', 'Port', 'State', 'Protocol', 'Service', 'Reason', 'Banner'])
+if len(sys.argv) > 2:
+    csvwriter.writerow(['IPv4', 'Hostname', 'Subnet', 'Environment', 'Port', 'State', 'Protocol', 'Service', 'Reason', 'Banner'])
+else:
+    csvwriter.writerow(['IPv4', 'Hostname', 'Port', 'State', 'Protocol', 'Service', 'Reason', 'Banner'])
 
 for scanned_host in nmap_report.hosts:
     if scanned_host.is_up:
         ipv4 = scanned_host.ipv4
         #ipv6 = scanned_host.ipv6
-        for key in targets.keys():
-            if IPAddress(ipv4) in IPNetwork(key):
-                subnet = str(key)
-                environment = str(targets[key])
-                break
+        if len(sys.argv) > 2:
+            for key in targets.keys():
+                if IPAddress(ipv4) in IPNetwork(key):
+                    subnet = str(key)
+                    environment = str(targets[key])
+                    break
 
         hostname = scanned_host.hostnames
         if scanned_host.os_fingerprinted is True and scanned_host.os_match_probabilities() is not None:
@@ -71,6 +76,9 @@ for scanned_host in nmap_report.hosts:
             banner = services.banner
             service = services.service
             reason = services.reason
-            csvwriter.writerow([ipv4, hostname, subnet, environment, port, state, protocol, service, reason, banner])
+            if len(sys.argv) > 2:
+                csvwriter.writerow([ipv4, hostname, subnet, environment, port, state, protocol, service, reason, banner])
+            else:
+                csvwriter.writerow([ipv4, hostname, port, state, protocol, service, reason, banner])
 
 csvfile.close()
