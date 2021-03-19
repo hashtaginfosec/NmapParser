@@ -13,7 +13,7 @@
 
 #Requires python-libnmap  --> pip install python-libnmap
 #Other requirements:
-# A targets.txt file that contains Subnets and names of those subnets (e.g., "192.168.1.0/24, GA DataCenter VLAN 1")
+# A targets.txt file that contains Subnets and names of those subnets ("192.168.1.0/24":"GA DataCenter VLAN 1")
 
 
 
